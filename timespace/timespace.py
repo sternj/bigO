@@ -1,9 +1,12 @@
+import ast
 import atexit
+import builtins
 import hashlib
 import inspect
 import json
 import time
 import marshal
+import random
 import tracemalloc
 import numpy as np
 
@@ -13,9 +16,69 @@ from scipy.stats import linregress
 # Global dictionary to store performance data
 performance_data = {}
 
-performance_data_filename = "performance_data.json"
-performance_analysis_filename = "performance_analysis.json"
+performance_data_filename = "timespace_data.json"
+performance_analysis_filename = "timespace_analysis.json"
 
+delay_factor = 0
+
+def monkey_patch_function(obj, func_name):
+    """
+    Monkey patch the specified function in the given object.
+    If factor > 0, the patched version will time the function and then sleep 
+    factor times as long as it took to run.
+    """
+    original = obj[func_name]
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        ret = original(*args, **kwargs)
+        elapsed = time.time() - start
+        time.sleep(elapsed * delay_factor)
+
+    # Set the wrapped function in place of the original
+    print(obj)
+    obj[func_name] = wrapper
+
+    
+class FunctionCallFinder(ast.NodeVisitor):
+    def __init__(self, function_name):
+        self.function_name = function_name
+        self.in_target_function = False
+        self.called_functions = []
+        self.function_stack = []
+        self.builtin_names = set(dir(builtins))  # All builtin identifiers
+        self.builtin_names.add('track')
+
+    def visit_FunctionDef(self, node):
+        # Push current function name
+        self.function_stack.append(node.name)
+
+        if node.name == self.function_name:
+            self.in_target_function = True
+
+        self.generic_visit(node)
+
+        # Pop and reset states if leaving target function
+        popped = self.function_stack.pop()
+        if popped == self.function_name:
+            self.in_target_function = False
+
+    def visit_Call(self, node):
+        if self.in_target_function:
+            func_node = node.func
+            func_name = None
+            if isinstance(func_node, ast.Name):
+                # Direct function call: foo()
+                func_name = func_node.id
+            elif isinstance(func_node, ast.Attribute):
+                # Method or attribute call: obj.method()
+                func_name = func_node.attr
+
+            # Check if the function name is not a builtin before adding
+            if func_name is not None and func_name not in self.builtin_names:
+                self.called_functions.append(func_name)
+        self.generic_visit(node)
+
+        
 def set_performance_data_filename(fname):
     global performance_data_filename
     global performance_data
@@ -40,6 +103,16 @@ def track(length_computation):
     """
     def decorator(func):
         # print(f"Tracking {func.__name__}")
+        
+        # Grab the source code and identify any functions invoked by this function.
+        source = inspect.getsource(inspect.getmodule(func))
+        tree = ast.parse(source)
+        finder = FunctionCallFinder(func.__name__)
+        finder.visit(tree)
+        print(f"Functions called by {func.__name__}: {finder.called_functions}")
+        for fn in finder.called_functions:
+            monkey_patch_function(func.__globals__, fn)
+
         code = marshal.dumps(func.__code__)
         hash_value = hashlib.sha256(code).hexdigest()
         func_name = func.__name__
@@ -49,6 +122,11 @@ def track(length_computation):
         def wrapper(*args, **kwargs):
             # Calculate the length based on the provided computation
             length = length_computation(*args, **kwargs)
+
+            # Delay all the called functions.
+            print(f"TIME TO DELAY {finder.called_functions}")
+            global delay_factor
+            delay_factor = random.uniform(1.0, 2.0)
             
             # Start measuring time and memory
             start_time = time.perf_counter()
@@ -67,12 +145,14 @@ def track(length_computation):
                 # Store the performance data
                 if full_name not in performance_data:
                     performance_data[full_name] = []
-                performance_data[full_name].append({
+                new_entry = {
                     "hash" : hash_value,
-                    "length": length,
+                    "length": length * delay_factor,
                     "time": elapsed_time,
                     "memory": peak,  # Peak memory usage in bytes
-                })
+                }
+                print(new_entry)
+                performance_data[full_name].append(new_entry)
 
             return result
         return wrapper
