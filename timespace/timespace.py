@@ -10,6 +10,7 @@ import random
 import tracemalloc
 import numpy as np
 
+from collections import defaultdict
 from functools import wraps
 from scipy.stats import linregress
 
@@ -19,7 +20,9 @@ performance_data = {}
 performance_data_filename = "timespace_data.json"
 performance_analysis_filename = "timespace_analysis.json"
 
-delay_factor = 0
+wrapped_functions = set()
+
+delay_factor = defaultdict(int)
 
 def monkey_patch_function(obj, func_name):
     """
@@ -29,14 +32,22 @@ def monkey_patch_function(obj, func_name):
     """
     original = obj[func_name]
     def wrapper(*args, **kwargs):
-        start = time.time()
-        ret = original(*args, **kwargs)
-        elapsed = time.time() - start
-        time.sleep(elapsed * delay_factor)
+        global delay_factor
+        delay = delay_factor[func_name]
+        print(f"Found {delay=}")
+        if delay > 0.0:
+            start = time.time()
+            ret = original(*args, **kwargs)
+            elapsed = time.time() - start
+            time.sleep(elapsed * delay)
+        else:
+            ret = original(*args, **kwargs)
+        return ret
 
     # Set the wrapped function in place of the original
-    print(obj)
+    print(f"MONKEY PATCH {obj=}")
     obj[func_name] = wrapper
+    wrapped_functions.add(func_name)
 
     
 class FunctionCallFinder(ast.NodeVisitor):
@@ -126,7 +137,9 @@ def track(length_computation):
             # Delay all the called functions.
             print(f"TIME TO DELAY {finder.called_functions}")
             global delay_factor
-            delay_factor = random.uniform(1.0, 2.0)
+            delay = random.uniform(1.0, 2.0)
+            for fn in finder.called_functions:
+                delay_factor[fn] = delay
             
             # Start measuring time and memory
             start_time = time.perf_counter()
@@ -147,12 +160,14 @@ def track(length_computation):
                     performance_data[full_name] = []
                 new_entry = {
                     "hash" : hash_value,
-                    "length": length * delay_factor,
+                    "length": length * delay,
                     "time": elapsed_time,
                     "memory": peak,  # Peak memory usage in bytes
                 }
                 print(new_entry)
                 performance_data[full_name].append(new_entry)
+                for fn in finder.called_functions:
+                    delay_factor[fn] = 0
 
             return result
         return wrapper
@@ -233,6 +248,8 @@ def save_performance_data():
     """
     Saves the collected performance data to a JSON file at program exit.
     """
+
+    # Load any saved data into a dictionary.
     global performance_data_filename
     try:
         with open(performance_data_filename, 'r') as infile:
@@ -241,7 +258,7 @@ def save_performance_data():
         old_data = {}
         pass
 
-    # Merge the two dictionaries
+    # Merge the old with the new dictionary
     for key, value_list in old_data.items():
         if key in performance_data:
             # Key exists in both dicts; extend the list from performance_data with the new entries
