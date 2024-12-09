@@ -15,7 +15,7 @@ from functools import wraps
 from scipy.stats import linregress
 
 # Global dictionary to store performance data
-performance_data = {}
+performance_data = defaultdict(list)
 
 performance_data_filename = "timespace_data.json"
 performance_analysis_filename = "timespace_analysis.json"
@@ -34,18 +34,18 @@ def monkey_patch_function(obj, func_name):
     def wrapper(*args, **kwargs):
         global delay_factor
         delay = delay_factor[func_name]
-        print(f"Found {delay=}")
         if delay > 0.0:
-            start = time.time()
-            ret = original(*args, **kwargs)
-            elapsed = time.time() - start
+            start = time.perf_counter()
+            try:
+                ret = original(*args, **kwargs)
+            finally:
+                elapsed = time.perf_counter() - start
             time.sleep(elapsed * delay)
         else:
             ret = original(*args, **kwargs)
         return ret
 
     # Set the wrapped function in place of the original
-    print(f"MONKEY PATCH {obj=}")
     obj[func_name] = wrapper
     wrapped_functions.add(func_name)
 
@@ -113,29 +113,33 @@ def track(length_computation):
         callable: The decorated function.
     """
     def decorator(func):
-        # print(f"Tracking {func.__name__}")
-        
         # Grab the source code and identify any functions invoked by this function.
         source = inspect.getsource(inspect.getmodule(func))
         tree = ast.parse(source)
         finder = FunctionCallFinder(func.__name__)
         finder.visit(tree)
-        print(f"Functions called by {func.__name__}: {finder.called_functions}")
+        # print(f"Functions called by {func.__name__}: {finder.called_functions}")
+        # Patch all the functions so we can individually delay them.
         for fn in finder.called_functions:
             monkey_patch_function(func.__globals__, fn)
 
+        # Store a hash of the code for checking if the function has changed
+        # Currently not implemented.
         code = marshal.dumps(func.__code__)
         hash_value = hashlib.sha256(code).hexdigest()
+
+        # Get the full name of the function (file + name)
         func_name = func.__name__
         file_name = inspect.getmodule(func).__file__
         full_name = str((func_name, file_name))
+        
         @wraps(func)
         def wrapper(*args, **kwargs):
             # Calculate the length based on the provided computation
             length = length_computation(*args, **kwargs)
 
             # Delay all the called functions.
-            print(f"TIME TO DELAY {finder.called_functions}")
+            # print(f"TIME TO DELAY {finder.called_functions}")
             global delay_factor
             delay = random.uniform(1.0, 2.0)
             for fn in finder.called_functions:
@@ -147,27 +151,28 @@ def track(length_computation):
             try:
                 result = func(*args, **kwargs)
             finally:
-                # Stop measuring memory
-                current, peak = tracemalloc.get_traced_memory()
-                tracemalloc.stop()
-                
                 # Stop measuring time
                 end_time = time.perf_counter()
                 elapsed_time = end_time - start_time
+                
+                # Stop measuring memory
+                current, peak = tracemalloc.get_traced_memory()
+                tracemalloc.stop()
 
+                # Turn off the delay for all functions
+                for fn in finder.called_functions:
+                    delay_factor[fn] = 0
+                
                 # Store the performance data
-                if full_name not in performance_data:
-                    performance_data[full_name] = []
                 new_entry = {
                     "hash" : hash_value,
                     "length": length * delay,
                     "time": elapsed_time,
                     "memory": peak,  # Peak memory usage in bytes
                 }
-                print(new_entry)
                 performance_data[full_name].append(new_entry)
-                for fn in finder.called_functions:
-                    delay_factor[fn] = 0
+
+                
 
             return result
         return wrapper
