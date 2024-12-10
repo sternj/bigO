@@ -11,8 +11,10 @@ import tracemalloc
 import numpy as np
 
 from collections import defaultdict
-from functools import wraps
+from functools import lru_cache, wraps
 from scipy.stats import linregress
+
+DILATION_FACTOR = 2.234
 
 # Global dictionary to store performance data
 performance_data = defaultdict(list)
@@ -22,7 +24,7 @@ performance_analysis_filename = "timespace_analysis.json"
 
 wrapped_functions = set()
 
-delay_factor = defaultdict(int)
+delay_factor = defaultdict(float)
 
 def monkey_patch_function(obj, func_name):
     """
@@ -32,11 +34,12 @@ def monkey_patch_function(obj, func_name):
     """
     original = obj[func_name]
     def wrapper(*args, **kwargs):
-        global delay_factor
         delay = delay_factor[func_name]
         if delay > 0.0:
+            assert delay == DILATION_FACTOR
             start = time.perf_counter()
             try:
+                import customalloc
                 ret = original(*args, **kwargs)
             finally:
                 elapsed = time.perf_counter() - start
@@ -49,46 +52,82 @@ def monkey_patch_function(obj, func_name):
     obj[func_name] = wrapper
     wrapped_functions.add(func_name)
 
-    
+
+
 class FunctionCallFinder(ast.NodeVisitor):
-    def __init__(self, function_name):
-        self.function_name = function_name
-        self.in_target_function = False
-        self.called_functions = []
-        self.function_stack = []
-        self.builtin_names = set(dir(builtins))  # All builtin identifiers
-        self.builtin_names.add('track')
+    def __init__(self):
+        # Maps function name -> set of functions it calls
+        self.call_graph = {}
+        self.current_function = None
+        self.builtin_names = set(dir(builtins))
 
     def visit_FunctionDef(self, node):
-        # Push current function name
-        self.function_stack.append(node.name)
-
-        if node.name == self.function_name:
-            self.in_target_function = True
+        func_name = node.name
+        self.call_graph[func_name] = set()
+        prev_function = self.current_function
+        self.current_function = func_name
 
         self.generic_visit(node)
 
-        # Pop and reset states if leaving target function
-        popped = self.function_stack.pop()
-        if popped == self.function_name:
-            self.in_target_function = False
+        self.current_function = prev_function
 
     def visit_Call(self, node):
-        if self.in_target_function:
+        if self.current_function is not None:
             func_node = node.func
             func_name = None
             if isinstance(func_node, ast.Name):
-                # Direct function call: foo()
                 func_name = func_node.id
             elif isinstance(func_node, ast.Attribute):
-                # Method or attribute call: obj.method()
                 func_name = func_node.attr
 
-            # Check if the function name is not a builtin before adding
-            if func_name is not None and func_name not in self.builtin_names:
-                self.called_functions.append(func_name)
+            if func_name and func_name not in self.builtin_names:
+                self.call_graph[self.current_function].add(func_name)
+
         self.generic_visit(node)
 
+    @lru_cache(maxsize=None)
+    def get_root_functions(self, entry_point):
+        """
+        Given an entry point function (like linear_function), return the functions
+        that appear as "roots" in the call chain starting from it. According to the user's rule:
+        
+        If a function f transitively calls another function g (for any f and g),
+        only list the function f.
+        
+        This means we look at all functions reachable from 'entry_point' and:
+          - Include functions that call at least one other function (directly or transitively)
+          - Exclude functions that do not call any other function (leaves)
+        """
+        # First, find all functions reachable from entry_point
+        reachable = self._get_reachable(entry_point)
+
+        # Now apply the user's rule
+        # We'll keep only those functions that call at least one other reachable function.
+        # If a function calls no others, it's a leaf and we do not include it.
+        # If a function calls another, we include it and exclude the callees.
+        
+        # Actually, the requirement says: "If f transitively calls g, only list f."
+        # This means:
+        # - If a function has outgoing calls (transitive calls), it's included.
+        # - If a function is a leaf (no calls), it's excluded.
+        
+        # Filter out leaves (functions with no outgoing calls):
+        non_leaf_functions = [f for f in reachable if self.call_graph[f] and f != entry_point]
+
+        return non_leaf_functions
+
+    def _get_reachable(self, start):
+        """
+        Return all functions reachable from the given start function (including start).
+        """
+        visited = set()
+        stack = [start]
+        while stack:
+            func = stack.pop()
+            if func not in visited and func in self.call_graph:
+                visited.add(func)
+                stack.extend(self.call_graph[func])
+        return visited
         
 def set_performance_data_filename(fname):
     global performance_data_filename
@@ -116,11 +155,14 @@ def track(length_computation):
         # Grab the source code and identify any functions invoked by this function.
         source = inspect.getsource(inspect.getmodule(func))
         tree = ast.parse(source)
-        finder = FunctionCallFinder(func.__name__)
+        finder = FunctionCallFinder()
         finder.visit(tree)
-        # print(f"Functions called by {func.__name__}: {finder.called_functions}")
+        called_functions = finder.get_root_functions(func.__name__)
+        # print(f"Functions called by {func.__name__}: {called_functions}")
+        if not called_functions:
+            print(f"Warning: cannot augment samples for {func.__name__}")
         # Patch all the functions so we can individually delay them.
-        for fn in finder.called_functions:
+        for fn in called_functions:
             monkey_patch_function(func.__globals__, fn)
 
         # Store a hash of the code for checking if the function has changed
@@ -139,12 +181,12 @@ def track(length_computation):
             length = length_computation(*args, **kwargs)
 
             # Delay all the called functions.
-            # print(f"TIME TO DELAY {finder.called_functions}")
             global delay_factor
-            delay = random.uniform(1.0, 2.0)
-            for fn in finder.called_functions:
+            delay = random.uniform(1.0, 200.0) # FIXME
+            for fn in finder.get_root_functions(func.__name__):
                 delay_factor[fn] = delay
-            
+            global DILATION_FACTOR
+            DILATION_FACTOR = delay
             # Start measuring time and memory
             start_time = time.perf_counter()
             tracemalloc.start()
@@ -160,7 +202,7 @@ def track(length_computation):
                 tracemalloc.stop()
 
                 # Turn off the delay for all functions
-                for fn in finder.called_functions:
+                for fn in finder.get_root_functions(func.__name__):
                     delay_factor[fn] = 0
                 
                 # Store the performance data
