@@ -76,5 +76,6 @@ jobs:
       - name: Upload wheels to Test PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          user: ${{ secrets.TESTPYPI_USERNAME }}
+          password: ${{ secrets.TESTPYPI_PASSWORD }}
           repository-url: https://test.pypi.org/legacy/
