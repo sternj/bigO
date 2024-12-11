@@ -1,10 +1,9 @@
 name: Publish Python Package
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  release:
+    types:
+      - published
 
 jobs:
   build-and-publish:
@@ -33,7 +32,6 @@ jobs:
           python -m build --wheel --outdir dist
 
       - name: Publish to PyPI
-        if: always()
         run: |
           python -m pip install twine
           python -m twine upload dist/*.whl --verbose
