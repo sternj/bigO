@@ -29,12 +29,13 @@ jobs:
           pip install build twine
 
       - name: Build package
-        run: python -m build
+        run: |
+          python -m build --wheel --outdir dist
 
       - name: Publish to PyPI
         if: always()
         run: |
-          python -m twine upload dist/* --verbose
+          python -m twine upload dist/*.whl --verbose
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
