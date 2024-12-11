@@ -169,7 +169,13 @@ def plot_complexities_from_file(filename='timespace_data.json'):
     
     sns.set_style("whitegrid")
     # Use squeeze=False to always get a 2D array of axes
-    fig, axes = plt.subplots(nrows=n_entries, ncols=2, figsize=(12, 4 * n_entries), squeeze=False)
+
+    plot_memory = True
+
+    if plot_memory:
+        fig, axes = plt.subplots(nrows=n_entries, ncols=2, figsize=(12, 4 * n_entries), squeeze=False)
+    else:
+        fig, axes = plt.subplots(nrows=n_entries, ncols=1, figsize=(6, 4 * n_entries), squeeze=False)
     
     for i, (func, filepath, lengths, times, mems) in enumerate(entries):
         # Remove outliers
@@ -194,22 +200,23 @@ def plot_complexities_from_file(filename='timespace_data.json'):
         ax_time.set_ylabel('Time')
         ax_time.set_title(title, fontsize=12)
         ax_time.legend()
-        
-        # Memory plot (axes[i,1])
-        ax_mem = axes[i, 1]
-        ax_mem.plot(n_mem, y_mem, 'o', color='red', label='Data (outliers removed)')
-        if mem_fit is not None:
-            model_name, slope, intercept, r, p, stderr, fit_x, fit_y, aic = mem_fit
-            sort_idx = np.argsort(fit_x)
-            ax_mem.plot(fit_x[sort_idx], fit_y[sort_idx], '-', color='red', linewidth=1, label='Fit')
-            model_display = format_model_name(model_name, slope)
-            title = f"{func} (Memory): {model_display}\nR={r:.3f}, p={p:.3g}, AIC={aic:.2f}"
-        else:
-            title = f"{func} (Memory): No fit"
-        ax_mem.set_xlabel('Input Size (n)')
-        ax_mem.set_ylabel('Memory')
-        ax_mem.set_title(title, fontsize=12)
-        ax_mem.legend()
+
+        if plot_memory:
+            # Memory plot (axes[i,1])
+            ax_mem = axes[i, 1]
+            ax_mem.plot(n_mem, y_mem, 'o', color='red', label='Data (outliers removed)')
+            if mem_fit is not None:
+                model_name, slope, intercept, r, p, stderr, fit_x, fit_y, aic = mem_fit
+                sort_idx = np.argsort(fit_x)
+                ax_mem.plot(fit_x[sort_idx], fit_y[sort_idx], '-', color='red', linewidth=1, label='Fit')
+                model_display = format_model_name(model_name, slope)
+                title = f"{func} (Memory): {model_display}\nR={r:.3f}, p={p:.3g}, AIC={aic:.2f}"
+            else:
+                title = f"{func} (Memory): No fit"
+            ax_mem.set_xlabel('Input Size (n)')
+            ax_mem.set_ylabel('Memory')
+            ax_mem.set_title(title, fontsize=12)
+            ax_mem.legend()
     
     plt.tight_layout()
     filename = "timespace.pdf"
