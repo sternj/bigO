@@ -197,7 +197,9 @@ def track(length_computation):
                 for fn in finder.get_root_functions(func.__name__):
                     delay_factor[fn] = 0
                 
-                # Store the performance data
+                # Store the performance data Only allow non-zero
+                # lengths to avoid issues downstream when computing
+                # logs of lengths.
                 if length * delay:
                     new_entry = {
                         "hash" : hash_value,
