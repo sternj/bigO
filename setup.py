@@ -3,20 +3,20 @@ from setuptools import setup, Extension
 # Define the native extension
 customalloc_extension = Extension(
     "customalloc",
-    sources=["timespace/custom_alloc.c"],
-    include_dirs=["timespace/include"],
+    sources=["bigO/custom_alloc.c"],
+    include_dirs=["bigO/include"],
 )
 
 # Call setup
 setup(
-    name="timespace",
+    name="bigO",
     version="0.0.1",
     description="Track asymptotic complexity in time and space.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="Emery Berger",
     author_email="emery.berger@gmail.com",
-    url="https://github.com/plasma-umass/timespace",
+    url="https://github.com/plasma-umass/bigO",
     classifiers=[
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
@@ -37,6 +37,6 @@ setup(
     ],
     python_requires=">=3.8",
     ext_modules=[customalloc_extension],
-    packages=["timespace"],
-    package_data={"timespace": ["*.c", "*.h"]},
+    packages=["bigO"],
+    package_data={"bigO": ["*.c", "*.h"]},
 )
