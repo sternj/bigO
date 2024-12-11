@@ -209,9 +209,7 @@ def track(length_computation):
                         "time": elapsed_time,
                         "memory": peak,  # Peak memory usage in bytes
                     }
-                performance_data[full_name].append(new_entry)
-
-                
+                    performance_data[full_name].append(new_entry)
 
             return result
         return wrapper
