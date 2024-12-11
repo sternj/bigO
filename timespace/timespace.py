@@ -40,7 +40,6 @@ def monkey_patch_function(obj, func_name):
                 ret = original(*args, **kwargs)
             finally:
                 elapsed = time.perf_counter() - start
-            print(f"SO SLEEPY ({delay}) => {elapsed * delay}")
             time.sleep(elapsed * delay)
         else:
             ret = original(*args, **kwargs)
@@ -99,19 +98,14 @@ class FunctionCallFinder(ast.NodeVisitor):
         # First, find all functions reachable from entry_point
         reachable = self._get_reachable(entry_point)
 
-        # Now apply the user's rule
-        # We'll keep only those functions that call at least one other reachable function.
-        # If a function calls no others, it's a leaf and we do not include it.
-        # If a function calls another, we include it and exclude the callees.
-        
-        # Actually, the requirement says: "If f transitively calls g, only list f."
+        # "If f transitively calls g, only list f."
         # This means:
         # - If a function has outgoing calls (transitive calls), it's included.
-        # - If a function is a leaf (no calls), it's excluded.
         
-        # Filter out leaves (functions with no outgoing calls):
-        non_leaf_functions = [f for f in reachable if self.call_graph[f] and f != entry_point]
-
+        # non_leaf_functions = [f for f in reachable if self.call_graph[f] and f != entry_point]
+        non_leaf_functions = reachable - {entry_point}
+        #    [f for f in reachable if f != entry_point]
+        print(f"non leaf functions = {non_leaf_functions}")
         return non_leaf_functions
 
     def _get_reachable(self, start):
@@ -204,12 +198,13 @@ def track(length_computation):
                     delay_factor[fn] = 0
                 
                 # Store the performance data
-                new_entry = {
-                    "hash" : hash_value,
-                    "length": length * delay,
-                    "time": elapsed_time,
-                    "memory": peak,  # Peak memory usage in bytes
-                }
+                if length * delay:
+                    new_entry = {
+                        "hash" : hash_value,
+                        "length": length * delay,
+                        "time": elapsed_time,
+                        "memory": peak,  # Peak memory usage in bytes
+                    }
                 performance_data[full_name].append(new_entry)
 
                 
