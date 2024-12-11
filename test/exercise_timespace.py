@@ -1,49 +1,71 @@
 import random
-import timespace
+import bigO
 import numpy as np
 
-# timespace.set_performance_data_filename("perf.json")
-
+def square(x):
+    for i in range(200):
+        z = x * x
+    return z
+    
 def multiply(x, n):
     z = 1
-    for i in range(500):
-        z += 1
+    for i in range(100):
+        z += square(x)
     return x * n
 
-@timespace.track(lambda n, **kwargs: n)
-def linear_function(n, multiplier=2):
-    return [multiply(x, multiplier) for x in range(n)]
+def multiply_add(x, n):
+    for i in range(200):
+        z = multiply(x, n) + 1
+    return z
 
-@timespace.track(lambda x, y: len(x) + len(y))
+i = 1
+class Test:
+    def __init__(self):
+        print("foo ON")
+        global i
+        self.foo = 11111111111111111111111111111111111111111111111111111111111111111111111111111111111 + i
+        i += 1
+        print("foo OFF")
+
+@bigO.track(lambda n, **kwargs: n)
+def linear_function(n, multiplier=2):
+    print("linear_function")
+    q = [Test() for i in range(1_000)]
+    return 
+    return [multiply(square(x), multiplier) for x in range(n)]
+
+@bigO.track(lambda x, y: len(x) + len(y))
 def linear_function_2(x, y):
     for i in range(999):
         z = x + y
     return x + y
 
-@timespace.track(lambda x: len(x))
+@bigO.track(lambda x: len(x))
 def nlogn_function(x):
     return sorted(x)
 
-@timespace.track(lambda n: n)
+@bigO.track(lambda n: n)
 def quadratic_function(n):
     print(f"quadratic function {n=}")
     x = 0.0
     for i in range(n):
         for j in range(n):
             for k in range(100):
-                q = multiply(x, 1.0)
+                q = multiply(square(x), 1.0)
                 # x += 1
-for i in range(10):
-    print("do something.")
-    quadratic_function(10) #  * random.randint(1, 10))
-import sys
-sys.exit(0)
-
 # Example function calls
 for i in range(10):
     print("example functions.")
-    linear_function(1_000)
+    linear_function(10)
     # linear_function(random.randint(1,1_000_000))
+
+import sys
+sys.exit(0)
+
+for i in range(10):
+    print("do something.")
+    quadratic_function(10) #  * random.randint(1, 10))
+
 for i in range(10):
     print("do something.")
     quadratic_function(10 * random.randint(1, 10))
