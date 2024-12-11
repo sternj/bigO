@@ -107,7 +107,7 @@ class FunctionCallFinder(ast.NodeVisitor):
         # non_leaf_functions = [f for f in reachable if self.call_graph[f] and f != entry_point]
         non_leaf_functions = reachable - {entry_point}
         #    [f for f in reachable if f != entry_point]
-        print(f"non leaf functions = {non_leaf_functions}")
+        # print(f"non leaf functions = {non_leaf_functions}")
         return non_leaf_functions
 
     def _get_reachable(self, start):
@@ -249,7 +249,7 @@ def fit_complexity_curves(input_file, output_file):
         # Fit memory complexity
         slope_memory, intercept_memory, r_value_memory, p_value_memory, _ = linregress(log_lengths, log_memory)
 
-        print(func_name, slope_time, slope_memory)
+        # print(func_name, slope_time, slope_memory)
         
         # Interpret slopes as complexity classes
         def interpret_complexity(slope):
