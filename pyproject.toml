@@ -1,0 +1,42 @@
+[project]
+name = "timespace"
+version = "0.0.1"
+description = "Track asymptotic complexity in time and space."
+readme = "README.md"
+keywords = ["performance", "profiler"]
+authors = [
+    {name = "Emery Berger", email = "emery.berger@gmail.com"},
+]
+requires-python = ">=3.8"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Debuggers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows"
+]
+dependencies = [
+"numpy",
+"scipy",
+"matplotlib",
+"seaborn"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/plasma-umass/timespace"
+"Repository" = "https://github.com/plasma-umass/timespace"
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
