@@ -123,11 +123,11 @@ jobs:
           TWINE_REPOSITORY: testpypi
           TWINE_USERNAME: ${{ secrets.TESTPYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.TESTPYPI_PASSWORD }}
-        run: twine upload --verbose dist/*
+        run: twine upload --verbose *
 
       - name: Release upload
         if: github.event_name == 'release'
         env:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: twine upload --verbose dist/*
+        run: twine upload --verbose *
