@@ -14,8 +14,6 @@ from collections import defaultdict
 from functools import lru_cache, wraps
 from scipy.stats import linregress
 
-DILATION_FACTOR = 2.234
-
 # Global dictionary to store performance data
 performance_data = defaultdict(list)
 
@@ -36,13 +34,13 @@ def monkey_patch_function(obj, func_name):
     def wrapper(*args, **kwargs):
         delay = delay_factor[func_name]
         if delay > 0.0:
-            assert delay == DILATION_FACTOR
             start = time.perf_counter()
             try:
                 import customalloc
                 ret = original(*args, **kwargs)
             finally:
                 elapsed = time.perf_counter() - start
+            print(f"SO SLEEPY ({delay}) => {elapsed * delay}")
             time.sleep(elapsed * delay)
         else:
             ret = original(*args, **kwargs)
@@ -182,11 +180,11 @@ def track(length_computation):
 
             # Delay all the called functions.
             global delay_factor
-            delay = random.uniform(1.0, 200.0) # FIXME
+            delay = random.uniform(1.0, 2.0) # FIXME
+            import customalloc
+            customalloc.set_dilation_factor(delay)
             for fn in finder.get_root_functions(func.__name__):
                 delay_factor[fn] = delay
-            global DILATION_FACTOR
-            DILATION_FACTOR = delay
             # Start measuring time and memory
             start_time = time.perf_counter()
             tracemalloc.start()
