@@ -1,5 +1,5 @@
 [project]
-name = "timespace"
+name = "bigO"
 version = "0.0.1"
 description = "Track asymptotic complexity in time and space."
 readme = "README.md"
@@ -34,8 +34,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/plasma-umass/timespace"
-"Repository" = "https://github.com/plasma-umass/timespace"
+"Homepage" = "https://github.com/plasma-umass/bigO"
+"Repository" = "https://github.com/plasma-umass/bigO"
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]
