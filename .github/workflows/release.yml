@@ -1,6 +1,5 @@
 name: Publish Python Package
-permissions:
-  id-token: write
+
 on:
   
   release:
@@ -16,9 +15,10 @@ jobs:
 
 
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+        os: [ubuntu-latest, macos-latest] # windows-latest, macos-13, macos-latest]
         # os: [linux, macos, windows] #, macos-latest, windows-latest]
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        # python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.11']
     steps:
       - name: Checkout source code
         uses: actions/checkout@v3
@@ -38,7 +38,8 @@ jobs:
           cibuildwheel --output-dir dist
         env:
           # CIBW_PLATFORM: ${{ matrix.os }}
-          CIBW_BUILD: cp3{9,10,11,12}-*
+          # CIBW_BUILD: cp3{9,10,11,12}-*
+          CIBW_BUILD: cp39-*
           CIBW_SKIP: pp*,cp38*
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
@@ -60,6 +61,8 @@ jobs:
     name: Publish to Test PyPI
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
