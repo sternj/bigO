@@ -9,14 +9,14 @@ customalloc_extension = Extension(
 
 # Call setup
 setup(
-    name="bigO",
+    name="evans_giggles_arden_rad",
     version="0.0.1",
     description="Track asymptotic complexity in time and space.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="Emery Berger",
     author_email="emery.berger@gmail.com",
-    url="https://github.com/plasma-umass/bigO",
+    url="https://github.com/sternj/bigO",
     classifiers=[
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",

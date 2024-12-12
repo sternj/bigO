@@ -1,5 +1,5 @@
 [project]
-name = "bigO"
+name = "evans_giggles_arden_rad"
 version = "0.0.1"
 description = "Track asymptotic complexity in time and space."
 readme = "README.md"
