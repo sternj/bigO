@@ -10,7 +10,7 @@ customalloc_extension = Extension(
 # Call setup
 setup(
     name="evans_giggles_arden_rad",
-    version="0.0.1",
+    version="0.0.2",
     description="Track asymptotic complexity in time and space.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
