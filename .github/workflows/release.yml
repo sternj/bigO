@@ -71,4 +71,4 @@ jobs:
           # user: ${{ secrets.PYPI_TEST_USERNAME }}
           password: ${{ secrets.PYPI_TEST_PASSWORD }}
           repository-url: https://test.pypi.org/legacy/
-          attestations: false
+          # attestations: false
