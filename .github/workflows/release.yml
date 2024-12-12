@@ -1,5 +1,6 @@
 name: Publish Python Package
-
+permissions:
+  id-token: write
 on:
   
   release:
